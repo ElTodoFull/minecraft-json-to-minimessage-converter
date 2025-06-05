@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft JSON to MiniMessage Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #171722, #142035);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #3ea85c, #4ecdc4, #45b7d1);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+        }
+
+        @keyframes gradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .converter-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .input-section, .output-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            color: #4ecdc4;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #4ecdc4;
+            box-shadow: 0 0 20px rgba(78, 205, 196, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background: linear-gradient(45deg, #3ea85c, #4ecdc4);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            position: relative;
+            overflow: hidden;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .examples {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .example-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            border-left: 4px solid #4ecdc4;
+        }
+
+        .example-title {
+            font-weight: bold;
+            color: #3ea85c;
+            margin-bottom: 10px;
+        }
+
+        .example-code {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #a8a8a8;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        
+        .code-block {
+            font-family: 'Courier New', monospace;
+            font-size: 8px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1em;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .error {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            color: #3ea85c;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .success {
+            background: rgba(78, 205, 196, 0.1);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            color: #4ecdc4;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        
+        .landscapepic {
+            max-width: 360px;
+            max-height: auto;
+        }
+        
+        .site-footer {
+          text-align: center;
+          font-size: 0.875rem; /* Small but readable */
+          color: #aaa;
+          padding: 1.5em 0;
+          margin-top: 4em;
+          border-top: 1px solid #2e2e2e;
+        }
+        
+        .site-footer .footer-content {
+          display: inline-flex;
+          gap: 0.5em;
+          flex-wrap: wrap;
+          justify-content: center;
+          align-items: center;
+        }
+        
+        .site-footer a {
+          color: #3ea85c;
+          text-decoration: none;
+          transition: color 0.2s;
+        }
+        
+        .site-footer a:hover {
+          color: #ACFEFF;
+        }
+
+        @media (max-width: 768px) {
+            .converter-section {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Minecraft JSON to MiniMessage Converter</h1>
+        
+        <div class="converter-section">
+            <div class="input-section">
+                <div class="section-title">
+                    <span>📝</span>
+                    JSON Input
+                </div>
+                <textarea id="jsonInput" placeholder="Paste your Minecraft JSON text component here..."></textarea>
+            </div>
+            
+            <div class="output-section">
+                <div class="section-title">
+                    <span>✨</span>
+                    MiniMessage Output
+                </div>
+                <textarea id="miniMessageOutput" readonly placeholder="Converted MiniMessage will appear here..."></textarea>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="convertJsonToMiniMessage()">🔄 Convert to MiniMessage</button>
+            <button onclick="clearAll()">🗑️ Clear All</button>
+            <button onclick="copyOutput()">📋 Copy Output</button>
+            <button onclick="loadExample()">📚 Load Example</button>
+        </div>
+        
+        <div id="messageArea"></div>
+        
+        <div class="examples">
+            <div class="section-title">
+                <span>💡</span>
+                Features & Examples
+            </div>
+            
+            <div class="example-item">
+                <div class="example-title">Gradient Detection</div>
+                <div class="example-code">Automatically detects color gradients in sequential text components and converts them to &lt;gradient&gt; tags</div>
+            </div>
+            
+            <div class="example-item">
+                <div class="example-title">Click Events</div>
+                <div class="example-code">• open_url → &lt;click:open_url:'URL'&gt;
+• run_command → &lt;click:run_command:'/command'&gt;
+• suggest_command → &lt;click:suggest_command:'/command'&gt;</div>
+            </div>
+            
+            <div class="example-item">
+                <div class="example-title">Hover Events</div>
+                <div class="example-code">• show_text → &lt;hover:show_text:'text'&gt;</div>
+            </div>
+            
+            <div class="example-item">
+                <div class="example-title">Text Formatting</div>
+                <div class="example-code">• bold → &lt;b&gt; or &lt;bold&gt;
+• italic → &lt;i&gt; or &lt;italic&gt;
+• underlined → &lt;u&gt; or &lt;underlined&gt;
+• strikethrough → &lt;st&gt; or &lt;strikethrough&gt;
+• colors → &lt;color:#hex&gt; or &lt;color_name&gt;</div>
+            </div>
+            <div class="example-item">
+                <div class="example-title">Troubleshooting line breaks</div>
+                <div class="example-code">• Depending how the plugin processes line breaks, you might have to manually adjust the new lines.
+• Some plugins might require a "|" at the beginning of the minimessage or typing "&#92;b" for each new line.
+• Others might require to have a blank line between. Example (ConditionalEvents yml: This will return one line after another):
+        <pre class="code-block"><code>      - "mini_message: 
+	      
+          &lt;gradient:#38FB08:#00DFFF&gt;&lt;hover:show_text:'Click to visit our web'&gt;&lt;click:open_url:'%server_website%'&gt;&lt;b&gt;YOURSERVER&lt;/b&gt;&lt;/click&gt;&lt;/hover&gt;&lt;/gradient&gt; ɢᴇɴᴇʀᴀʟ ɪɴғᴏ
+		  
+          • Read the &lt;green&gt;&lt;i&gt;&lt;click:run_command:'/rules'&gt;/rules&lt;/click&gt;&lt;/i&gt;&lt;/green&gt;
+		  
+          • Play right away with &lt;green&gt;&lt;i&gt;&lt;click:suggest_command:'/rtp'&gt;/rtp&lt;/click&gt;&lt;/i&gt;&lt;/green&gt;
+		  
+          • Join our &lt;green&gt;&lt;i&gt;&lt;click:open_url:'%discord_link%'&gt;/discord&lt;/click&gt;&lt;/i&gt;&lt;/green&gt;
+		  
+          &lt;gray&gt;&lt;click:run_command:'/help'&gt;[ɢᴇɴᴇʀᴀʟ]&lt;/click&gt;&lt;/gray&gt;&lt;green&gt; &lt;/green&gt;&lt;green&gt;&lt;click:run_command:'/help technical'&gt;[ᴛᴇᴄʜɴɪᴄᴀʟ]&lt;/click&gt;&lt;/green&gt;&lt;green&gt; &lt;/green&gt;&lt;green&gt;&lt;click:run_command:'/help claim'&gt;[ᴄʟᴀɪᴍ]&lt;/click&gt;&lt;/green&gt;&lt;green&gt; &lt;/green&gt;&lt;green&gt;&lt;click:run_command:'/help graves'&gt;[ɢʀᴀᴠᴇs]&lt;/click&gt;&lt;/green&gt;&lt;gray&gt; (Bedrock &lt;/gray&gt;&lt;i&gt;/help #&lt;/i&gt;&lt;gray&gt;)&lt;/gray&gt;
+		  
+          &lt;gradient:#3494E6:#EC6EAD&gt;Hope you enjoy it!&lt;/gradient&gt;"</code></pre></div>
+            </div>
+            <div class="example-item">
+                <div class="example-title">Output example In-Game</div>
+                <div class=".landscapepic"><img src="https://i.ibb.co/j9nY8g7Y/Captura-de-pantalla-2025-06-05-130952.png" alt="Captura-de-pantalla-2025-06-05-130952" border="0"></div>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="site-footer">
+      <div class="footer-content">
+        <span>© 2025 ElTodoFull</span>
+        <span>•</span>
+        <a href="https://github.com/ElTodoFull" target="_blank">GitHub</a>
+      </div>
+    </footer>
+
+    <script>
+        // Utility function to parse hex color
+        function parseColor(color) {
+            if (typeof color === 'string') {
+                if (color.startsWith('#')) {
+                    return { type: 'hex', value: color };
+                }
+                // Handle named colors - these are used directly as tags in MiniMessage
+                const minecraftColors = [
+                    'black', 'dark_blue', 'dark_green', 'dark_aqua', 'dark_red', 
+                    'dark_purple', 'gold', 'gray', 'dark_gray', 'blue', 'green', 
+                    'aqua', 'red', 'light_purple', 'yellow', 'white'
+                ];
+                
+                if (minecraftColors.includes(color)) {
+                    return { type: 'named', value: color };
+                }
+                
+                // If it's not a recognized color, treat it as named anyway
+                return { type: 'named', value: color };
+            }
+            return null;
+        }
+
+        // Function to detect if colors form a gradient
+        function detectGradient(components) {
+            if (components.length < 2) return null;
+            
+            // Check if all components have colors and same formatting
+            const colorsAndText = [];
+            let commonFormatting = null;
+            let commonClickEvent = null;
+            let commonHoverEvent = null;
+            
+            for (let comp of components) {
+                if (!comp.color || !comp.text) return null;
+                
+                const color = parseColor(comp.color);
+                if (!color) return null;
+                
+                colorsAndText.push({ color: color, text: comp.text });
+                
+                // Check if formatting is consistent
+                const formatting = {
+                    bold: comp.bold || false,
+                    italic: comp.italic || false,
+                    underlined: comp.underlined || false,
+                    strikethrough: comp.strikethrough || false
+                };
+                
+                if (commonFormatting === null) {
+                    commonFormatting = formatting;
+                    commonClickEvent = comp.clickEvent;
+                    commonHoverEvent = comp.hoverEvent;
+                } else {
+                    // Check if formatting matches
+                    if (JSON.stringify(formatting) !== JSON.stringify(commonFormatting) ||
+                        JSON.stringify(comp.clickEvent) !== JSON.stringify(commonClickEvent) ||
+                        JSON.stringify(comp.hoverEvent) !== JSON.stringify(commonHoverEvent)) {
+                        return null;
+                    }
+                }
+            }
+            
+            return {
+                startColor: colorsAndText[0].color.value,
+                endColor: colorsAndText[colorsAndText.length - 1].color.value,
+                text: colorsAndText.map(c => c.text).join(''),
+                formatting: commonFormatting,
+                clickEvent: commonClickEvent,
+                hoverEvent: commonHoverEvent
+            };
+        }
+
+        // Function to convert a single component to MiniMessage
+        function convertComponent(component, isGradient = false) {
+            if (typeof component === 'string') {
+                // Handle line breaks in string components
+                return component.replace(/\n/g, '\n');
+            }
+            
+            if (isGradient) {
+                // Handle line breaks in gradient text too
+                return (component.text || '').replace(/\n/g, '\n');
+            }
+            
+            let result = (component.text || '').replace(/\n/g, '\n');
+            let tags = [];
+            let closeTags = [];
+            
+            // Handle colors (only if not part of gradient)
+            if (component.color && !isGradient) {
+                const colorInfo = parseColor(component.color);
+                if (colorInfo) {
+                    if (colorInfo.type === 'hex') {
+                        tags.push(`<color:${colorInfo.value}>`);
+                        closeTags.unshift('</color>');
+                    } else {
+                        // Named color - use as direct tag
+                        tags.push(`<${colorInfo.value}>`);
+                        closeTags.unshift(`</${colorInfo.value}>`);
+                    }
+                }
+            }
+            
+            // Handle text formatting
+            if (component.bold) {
+                tags.push('<b>');
+                closeTags.unshift('</b>');
+            }
+            if (component.italic) {
+                tags.push('<i>');
+                closeTags.unshift('</i>');
+            }
+            if (component.underlined) {
+                tags.push('<u>');
+                closeTags.unshift('</u>');
+            }
+            if (component.strikethrough) {
+                tags.push('<st>');
+                closeTags.unshift('</st>');
+            }
+            
+            // Handle click events
+            if (component.clickEvent) {
+                const action = component.clickEvent.action;
+                const value = component.clickEvent.value;
+                tags.push(`<click:${action}:'${value}'>`);
+                closeTags.unshift('</click>');
+            }
+            
+            // Handle hover events
+            if (component.hoverEvent && component.hoverEvent.action === 'show_text') {
+                let hoverText = '';
+                if (typeof component.hoverEvent.contents === 'string') {
+                    hoverText = component.hoverEvent.contents;
+                } else if (Array.isArray(component.hoverEvent.contents)) {
+                    hoverText = component.hoverEvent.contents.map(c => 
+                        typeof c === 'string' ? c : c.text || ''
+                    ).join('');
+                }
+                tags.push(`<hover:show_text:'${hoverText}'>`);
+                closeTags.unshift('</hover>');
+            }
+            
+            return tags.join('') + result + closeTags.join('');
+        }
+
+        // Main conversion function
+        function convertJsonToMiniMessage() {
+            const input = document.getElementById('jsonInput').value.trim();
+            const output = document.getElementById('miniMessageOutput');
+            const messageArea = document.getElementById('messageArea');
+            
+            // Clear previous messages
+            messageArea.innerHTML = '';
+            
+            if (!input) {
+                showMessage('Please enter JSON text to convert.', 'error');
+                return;
+            }
+            
+            try {
+                const jsonData = JSON.parse(input);
+                let components = Array.isArray(jsonData) ? jsonData : [jsonData];
+                
+                // Remove empty string components at the beginning
+                components = components.filter((comp, index) => {
+                    if (index === 0 && comp === '') return false;
+                    return true;
+                });
+                
+                let result = '';
+                let i = 0;
+                
+                while (i < components.length) {
+                    const component = components[i];
+                    
+                    if (typeof component === 'string') {
+                        result += component;
+                        i++;
+                        continue;
+                    }
+                    
+                    // Look ahead for gradient detection
+                    let gradientLength = 1;
+                    while (i + gradientLength < components.length) {
+                        const nextComp = components[i + gradientLength];
+                        if (typeof nextComp === 'string' || !nextComp.color || !nextComp.text) break;
+                        gradientLength++;
+                    }
+                    
+                    // Check if we have a gradient
+                    if (gradientLength > 1) {
+                        const gradientComponents = components.slice(i, i + gradientLength);
+                        const gradient = detectGradient(gradientComponents);
+                        
+                        if (gradient) {
+                            // Build gradient with all formatting
+                            let gradientTags = [];
+                            let gradientCloseTags = [];
+                            
+                            // Add gradient
+                            gradientTags.push(`<gradient:${gradient.startColor}:${gradient.endColor}>`);
+                            gradientCloseTags.unshift('</gradient>');
+                            
+                            // Add hover event
+                            if (gradient.hoverEvent && gradient.hoverEvent.action === 'show_text') {
+                                let hoverText = '';
+                                if (typeof gradient.hoverEvent.contents === 'string') {
+                                    hoverText = gradient.hoverEvent.contents;
+                                } else if (Array.isArray(gradient.hoverEvent.contents)) {
+                                    hoverText = gradient.hoverEvent.contents.map(c => 
+                                        typeof c === 'string' ? c : c.text || ''
+                                    ).join('');
+                                }
+                                gradientTags.push(`<hover:show_text:'${hoverText}'>`);
+                                gradientCloseTags.unshift('</hover>');
+                            }
+                            
+                            // Add click event
+                            if (gradient.clickEvent) {
+                                const action = gradient.clickEvent.action;
+                                const value = gradient.clickEvent.value;
+                                gradientTags.push(`<click:${action}:'${value}'>`);
+                                gradientCloseTags.unshift('</click>');
+                            }
+                            
+                            // Add text formatting
+                            if (gradient.formatting.bold) {
+                                gradientTags.push('<b>');
+                                gradientCloseTags.unshift('</b>');
+                            }
+                            if (gradient.formatting.italic) {
+                                gradientTags.push('<i>');
+                                gradientCloseTags.unshift('</i>');
+                            }
+                            if (gradient.formatting.underlined) {
+                                gradientTags.push('<u>');
+                                gradientCloseTags.unshift('</u>');
+                            }
+                            if (gradient.formatting.strikethrough) {
+                                gradientTags.push('<st>');
+                                gradientCloseTags.unshift('</st>');
+                            }
+                            
+                            // Handle line breaks in gradient text
+                            const gradientText = gradient.text.replace(/\n/g, '\n');
+                            result += gradientTags.join('') + gradientText + gradientCloseTags.join('');
+                            i += gradientLength;
+                            continue;
+                        }
+                    }
+                    
+                    // Convert single component
+                    result += convertComponent(component);
+                    i++;
+                }
+                
+                output.value = result;
+                showMessage('✅ Conversion successful!', 'success');
+                
+            } catch (error) {
+                showMessage('❌ Invalid JSON format. Please check your input.', 'error');
+                console.error('Conversion error:', error);
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageArea = document.getElementById('messageArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = text;
+            messageArea.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        function clearAll() {
+            document.getElementById('jsonInput').value = '';
+            document.getElementById('miniMessageOutput').value = '';
+            document.getElementById('messageArea').innerHTML = '';
+        }
+
+        function copyOutput() {
+            const output = document.getElementById('miniMessageOutput');
+            if (output.value) {
+                navigator.clipboard.writeText(output.value).then(() => {
+                    showMessage('📋 Output copied to clipboard!', 'success');
+                }).catch(() => {
+                    output.select();
+                    document.execCommand('copy');
+                    showMessage('📋 Output copied to clipboard!', 'success');
+                });
+            } else {
+                showMessage('⚠️ No output to copy.', 'error');
+            }
+        }
+
+        function loadExample() {
+            const exampleJson = `["",{"text":"\\n"},{"text":"YO","bold":true,"color":"#38FB08","clickEvent":{"action":"open_url","value":"%server_website%"},"hoverEvent":{"action":"show_text","contents":"Click to visit our web"}},{"text":"U","bold":true,"color":"#30F72B","clickEvent":{"action":"open_url","value":"%server_website%"},"hoverEvent":{"action":"show_text","contents":"Click to visit our web"}},{"text":"R","bold":true,"color":"#28F34F","clickEvent":{"action":"open_url","value":"%server_website%"},"hoverEvent":{"action":"show_text","contents":"Click to visit our web"}},{"text":"S","bold":true,"color":"#20EF72","clickEvent":{"action":"open_url","value":"%server_website%"},"hoverEvent":{"action":"show_text","contents":"Click to visit our web"}},{"text":"E","bold":true,"color":"#18EB95","clickEvent":{"action":"open_url","value":"%server_website%"},"hoverEvent":{"action":"show_text","contents":"Click to visit our web"}},{"text":"R","bold":true,"color":"#10E7B8","clickEvent":{"action":"open_url","value":"%server_website%"},"hoverEvent":{"action":"show_text","contents":"Click to visit our web"}},{"text":"V","bold":true,"color":"#08E3DC","clickEvent":{"action":"open_url","value":"%server_website%"},"hoverEvent":{"action":"show_text","contents":"Click to visit our web"}},{"text":"ER","bold":true,"color":"#00DFFF","clickEvent":{"action":"open_url","value":"%server_website%"},"hoverEvent":{"action":"show_text","contents":"Click to visit our web"}},{"text":" \\u0262\\u1d07\\u0274\\u1d07\\u0280\\u1d00\\u029f \\u026a\\u0274\\u0493\\u1d0f\\n\\u2022 Read the "},{"text":"/rules","italic":true,"color":"green","clickEvent":{"action":"run_command","value":"/rules"}},{"text":"\\n\\u2022 Play right away with "},{"text":"/rtp","italic":true,"color":"green","clickEvent":{"action":"suggest_command","value":"/rtp"}},{"text":"\\n\\u2022 Join our "},{"text":"/discord","italic":true,"color":"green","clickEvent":{"action":"open_url","value":"%discord_link%"}},{"text":"\\n"},{"text":"[\\u0262\\u1d07\\u0274\\u1d07\\u0280\\u1d00\\u029f]","color":"gray","clickEvent":{"action":"run_command","value":"/help"}},{"text":" ","color":"green"},{"text":"[\\u1d1b\\u1d07\\u1d04\\u029c\\u0274\\u026a\\u1d04\\u1d00\\u029f]","color":"green","clickEvent":{"action":"run_command","value":"/help technical"}},{"text":" ","color":"green"},{"text":"[\\u1d04\\u029f\\u1d00\\u026a\\u1d0d]","color":"green","clickEvent":{"action":"run_command","value":"/help claim"}},{"text":" ","color":"green"},{"text":"[\\u0262\\u0280\\u1d00\\u1d20\\u1d07s]","color":"green","clickEvent":{"action":"run_command","value":"/help graves"}},{"text":" (Bedrock ","color":"gray"},{"text":"/help #","italic":true},{"text":")","color":"gray"},{"text":"\\n"},{"text":"H","color":"#3494E6"},{"text":"o","color":"#4191E2"},{"text":"p","color":"#4E8FDE"},{"text":"e ","color":"#5B8CDA"},{"text":"y","color":"#6989D6"},{"text":"o","color":"#7686D2"},{"text":"u ","color":"#8384CE"},{"text":"e","color":"#9081CA"},{"text":"n","color":"#9D7EC5"},{"text":"j","color":"#AA7CC1"},{"text":"o","color":"#B779BD"},{"text":"y ","color":"#C576B9"},{"text":"i","color":"#D273B5"},{"text":"t","color":"#DF71B1"},{"text":"!","color":"#EC6EAD"}]`;
+            
+            document.getElementById('jsonInput').value = exampleJson;
+            showMessage('📚 Example loaded! Click Convert to see the result.', 'success');
+        }
+
+        // Auto-convert when input changes (with debounce)
+        let timeoutId;
+        document.getElementById('jsonInput').addEventListener('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(convertJsonToMiniMessage, 1000);
+        });
+    </script>
+</body>
+</html>
