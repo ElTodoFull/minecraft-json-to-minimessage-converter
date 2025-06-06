@@ -349,11 +349,11 @@
             return null;
         }
 
-        // Function to detect if colors form a gradient
+        // Function to detect if colors form a gradient - FIXED VERSION
         function detectGradient(components) {
             if (components.length < 2) return null;
             
-            // Check if all components have colors and same formatting
+            // Check if all components have hex colors and same formatting
             const colorsAndText = [];
             let commonFormatting = null;
             let commonClickEvent = null;
@@ -363,7 +363,8 @@
                 if (!comp.color || !comp.text) return null;
                 
                 const color = parseColor(comp.color);
-                if (!color) return null;
+                // Only consider hex colors for gradients, not named colors
+                if (!color || color.type !== 'hex') return null;
                 
                 colorsAndText.push({ color: color, text: comp.text });
                 
@@ -386,6 +387,15 @@
                         JSON.stringify(comp.hoverEvent) !== JSON.stringify(commonHoverEvent)) {
                         return null;
                     }
+                }
+            }
+            
+            // Additional check: ensure this looks like a proper gradient
+            // (colors should be reasonably similar and form a progression)
+            if (colorsAndText.length < 3) {
+                // For 2 colors, just check if they're different
+                if (colorsAndText[0].color.value === colorsAndText[1].color.value) {
+                    return null;
                 }
             }
             
@@ -473,7 +483,50 @@
             return tags.join('') + result + closeTags.join('');
         }
 
-        // Main conversion function
+        // NEW: Function to group components by common click events
+        function groupByClickEvent(components) {
+            const groups = [];
+            let currentGroup = [];
+            let currentClickEvent = null;
+            
+            for (let i = 0; i < components.length; i++) {
+                const comp = components[i];
+                
+                if (typeof comp === 'string') {
+                    if (currentGroup.length > 0) {
+                        groups.push({ components: currentGroup, clickEvent: currentClickEvent });
+                        currentGroup = [];
+                        currentClickEvent = null;
+                    }
+                    groups.push({ components: [comp], clickEvent: null });
+                    continue;
+                }
+                
+                const compClickEvent = comp.clickEvent;
+                const clickEventStr = JSON.stringify(compClickEvent);
+                
+                if (currentClickEvent === null) {
+                    currentClickEvent = clickEventStr;
+                    currentGroup = [comp];
+                } else if (currentClickEvent === clickEventStr) {
+                    currentGroup.push(comp);
+                } else {
+                    // Different click event, save current group and start new one
+                    groups.push({ components: currentGroup, clickEvent: currentClickEvent });
+                    currentGroup = [comp];
+                    currentClickEvent = clickEventStr;
+                }
+            }
+            
+            // Don't forget the last group
+            if (currentGroup.length > 0) {
+                groups.push({ components: currentGroup, clickEvent: currentClickEvent });
+            }
+            
+            return groups;
+        }
+
+        // Main conversion function - UPDATED
         function convertJsonToMiniMessage() {
             const input = document.getElementById('jsonInput').value.trim();
             const output = document.getElementById('miniMessageOutput');
@@ -497,91 +550,121 @@
                     return true;
                 });
                 
+                // Group components by click events first
+                const groups = groupByClickEvent(components);
                 let result = '';
-                let i = 0;
                 
-                while (i < components.length) {
-                    const component = components[i];
-                    
-                    if (typeof component === 'string') {
-                        result += component;
-                        i++;
+                for (const group of groups) {
+                    if (group.components.length === 1 && typeof group.components[0] === 'string') {
+                        // Simple string component
+                        result += group.components[0];
                         continue;
                     }
                     
-                    // Look ahead for gradient detection
-                    let gradientLength = 1;
-                    while (i + gradientLength < components.length) {
-                        const nextComp = components[i + gradientLength];
-                        if (typeof nextComp === 'string' || !nextComp.color || !nextComp.text) break;
-                        gradientLength++;
+                    // Check if this group has a common click event
+                    const hasClickEvent = group.clickEvent && group.clickEvent !== 'null';
+                    let clickEventObj = null;
+                    
+                    if (hasClickEvent) {
+                        clickEventObj = JSON.parse(group.clickEvent);
                     }
                     
-                    // Check if we have a gradient
-                    if (gradientLength > 1) {
-                        const gradientComponents = components.slice(i, i + gradientLength);
-                        const gradient = detectGradient(gradientComponents);
+                    let groupResult = '';
+                    let i = 0;
+                    
+                    while (i < group.components.length) {
+                        const component = group.components[i];
                         
-                        if (gradient) {
-                            // Build gradient with all formatting
-                            let gradientTags = [];
-                            let gradientCloseTags = [];
-                            
-                            // Add gradient
-                            gradientTags.push(`<gradient:${gradient.startColor}:${gradient.endColor}>`);
-                            gradientCloseTags.unshift('</gradient>');
-                            
-                            // Add hover event
-                            if (gradient.hoverEvent && gradient.hoverEvent.action === 'show_text') {
-                                let hoverText = '';
-                                if (typeof gradient.hoverEvent.contents === 'string') {
-                                    hoverText = gradient.hoverEvent.contents;
-                                } else if (Array.isArray(gradient.hoverEvent.contents)) {
-                                    hoverText = gradient.hoverEvent.contents.map(c => 
-                                        typeof c === 'string' ? c : c.text || ''
-                                    ).join('');
-                                }
-                                gradientTags.push(`<hover:show_text:'${hoverText}'>`);
-                                gradientCloseTags.unshift('</hover>');
-                            }
-                            
-                            // Add click event
-                            if (gradient.clickEvent) {
-                                const action = gradient.clickEvent.action;
-                                const value = gradient.clickEvent.value;
-                                gradientTags.push(`<click:${action}:'${value}'>`);
-                                gradientCloseTags.unshift('</click>');
-                            }
-                            
-                            // Add text formatting
-                            if (gradient.formatting.bold) {
-                                gradientTags.push('<b>');
-                                gradientCloseTags.unshift('</b>');
-                            }
-                            if (gradient.formatting.italic) {
-                                gradientTags.push('<i>');
-                                gradientCloseTags.unshift('</i>');
-                            }
-                            if (gradient.formatting.underlined) {
-                                gradientTags.push('<u>');
-                                gradientCloseTags.unshift('</u>');
-                            }
-                            if (gradient.formatting.strikethrough) {
-                                gradientTags.push('<st>');
-                                gradientCloseTags.unshift('</st>');
-                            }
-                            
-                            // Handle line breaks in gradient text
-                            const gradientText = gradient.text.replace(/\n/g, '\n');
-                            result += gradientTags.join('') + gradientText + gradientCloseTags.join('');
-                            i += gradientLength;
+                        if (typeof component === 'string') {
+                            groupResult += component;
+                            i++;
                             continue;
                         }
+                        
+                        // Look ahead for gradient detection within this group
+                        let gradientLength = 1;
+                        while (i + gradientLength < group.components.length) {
+                            const nextComp = group.components[i + gradientLength];
+                            if (typeof nextComp === 'string' || !nextComp.color || !nextComp.text) break;
+                            
+                            // Check if the next component could be part of a gradient
+                            const currentColor = parseColor(nextComp.color);
+                            if (!currentColor || currentColor.type !== 'hex') break;
+                            
+                            gradientLength++;
+                        }
+                        
+                        // Check if we have a gradient
+                        if (gradientLength > 2) { // Require at least 3 components for gradient
+                            const gradientComponents = group.components.slice(i, i + gradientLength);
+                            const gradient = detectGradient(gradientComponents);
+                            
+                            if (gradient) {
+                                // Build gradient without click event (it will be added by the group wrapper)
+                                let gradientTags = [];
+                                let gradientCloseTags = [];
+                                
+                                // Add gradient
+                                gradientTags.push(`<gradient:${gradient.startColor}:${gradient.endColor}>`);
+                                gradientCloseTags.unshift('</gradient>');
+                                
+                                // Add hover event if not handled by group
+                                if (gradient.hoverEvent && gradient.hoverEvent.action === 'show_text' && !hasClickEvent) {
+                                    let hoverText = '';
+                                    if (typeof gradient.hoverEvent.contents === 'string') {
+                                        hoverText = gradient.hoverEvent.contents;
+                                    } else if (Array.isArray(gradient.hoverEvent.contents)) {
+                                        hoverText = gradient.hoverEvent.contents.map(c => 
+                                            typeof c === 'string' ? c : c.text || ''
+                                        ).join('');
+                                    }
+                                    gradientTags.push(`<hover:show_text:'${hoverText}'>`);
+                                    gradientCloseTags.unshift('</hover>');
+                                }
+                                
+                                // Add text formatting
+                                if (gradient.formatting.bold) {
+                                    gradientTags.push('<b>');
+                                    gradientCloseTags.unshift('</b>');
+                                }
+                                if (gradient.formatting.italic) {
+                                    gradientTags.push('<i>');
+                                    gradientCloseTags.unshift('</i>');
+                                }
+                                if (gradient.formatting.underlined) {
+                                    gradientTags.push('<u>');
+                                    gradientCloseTags.unshift('</u>');
+                                }
+                                if (gradient.formatting.strikethrough) {
+                                    gradientTags.push('<st>');
+                                    gradientCloseTags.unshift('</st>');
+                                }
+                                
+                                // Handle line breaks in gradient text
+                                const gradientText = gradient.text.replace(/\n/g, '\n');
+                                groupResult += gradientTags.join('') + gradientText + gradientCloseTags.join('');
+                                i += gradientLength;
+                                continue;
+                            }
+                        }
+                        
+                        // Convert single component (without click event if it's handled by group)
+                        const compCopy = { ...component };
+                        if (hasClickEvent) {
+                            delete compCopy.clickEvent; // Remove click event since it's handled by group
+                        }
+                        groupResult += convertComponent(compCopy);
+                        i++;
                     }
                     
-                    // Convert single component
-                    result += convertComponent(component);
-                    i++;
+                    // Wrap the entire group with click event if needed
+                    if (hasClickEvent && groupResult.trim()) {
+                        const action = clickEventObj.action;
+                        const value = clickEventObj.value;
+                        result += `<click:${action}:'${value}'>${groupResult}</click>`;
+                    } else {
+                        result += groupResult;
+                    }
                 }
                 
                 output.value = result;
